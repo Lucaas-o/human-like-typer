@@ -3,10 +3,19 @@ import time
 import random
 import threading
 import os
+import sys
+import json
 
 # Script metadata
 VERSION = "1.0.0"
-script_dir = os.path.dirname(os.path.abspath(__file__))
+
+def get_script_directory():
+    """Get the directory where the script or executable is running."""
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
+
+script_dir = get_script_directory()
 config_path = os.path.join(script_dir, "config.txt")
 
 # Language translations
@@ -92,36 +101,23 @@ translations = {
 pause_flag = False
 
 def load_config():
-    """Load configuration from config.txt or use defaults if invalid."""
-    default_config = {"wpm": 60, "language": "en", "cooldown": 3}
-    if not os.path.exists(config_path):
-        save_config(default_config)
-        return default_config
-    
-    config = default_config.copy()
-    try:
-        with open(config_path, "r") as f:
-            for line in f:
-                line = line.strip()
-                if line and "=" in line:
-                    key, value = line.split("=", 1)
-                    if key == "wpm":
-                        config["wpm"] = float(value)
-                    elif key == "language":
-                        config["language"] = value
-                    elif key == "cooldown":
-                        config["cooldown"] = int(value)
-    except (ValueError, IOError):
-        print(translations["en"]["config_error"])
-        save_config(default_config)
-        return default_config
+    """Load the config file if it exists, otherwise create a default one."""
+    if os.path.exists(config_path):
+        with open(config_path, "r") as file:
+            try:
+                return json.load(file)
+            except json.JSONDecodeError:
+                print(translations["en"]["config_error"])
+    # Default config with all settings
+    config = {"wpm": 60, "language": "en", "cooldown": 3}
+    with open(config_path, "w") as file:
+        json.dump(config, file, indent=4)
     return config
 
 def save_config(config):
-    """Save configuration to config.txt in the script's directory."""
-    with open(config_path, "w") as f:
-        for key, value in config.items():
-            f.write(f"{key}={value}\n")
+    """Save configuration to config.txt in the script's directory using JSON format."""
+    with open(config_path, "w") as file:
+        json.dump(config, file, indent=4)
 
 def get_text_file_path(trans):
     """Get the text file path, defaulting to 'text.txt' if available."""
@@ -165,10 +161,13 @@ def configure(config):
         print("\n" + trans["config_menu"].format(wpm=config["wpm"], language=config["language"], cooldown=config["cooldown"]))
         choice = input("Select an option (1-4): ")
         if choice == "1":
-            wpm = float(input(trans["enter_wpm"]))
-            config["wpm"] = wpm
-            save_config(config)
-            print(trans["wpm_set"].format(wpm=wpm))
+            try:
+                wpm = float(input(trans["enter_wpm"]))
+                config["wpm"] = wpm
+                save_config(config)
+                print(trans["wpm_set"].format(wpm=wpm))
+            except ValueError:
+                print("Invalid input for WPM.")
         elif choice == "2":
             lang = input(trans["enter_language"])
             if lang in ["en", "sp", "fr"]:
@@ -178,14 +177,21 @@ def configure(config):
             else:
                 print("Invalid language. Choose en, sp, or fr.")
         elif choice == "3":
-            cooldown = int(input(trans["enter_cooldown"]))
-            config["cooldown"] = cooldown
-            save_config(config)
-            print(trans["cooldown_set"].format(cooldown=cooldown))
+            try:
+                cooldown = int(input(trans["enter_cooldown"]))
+                config["cooldown"] = cooldown
+                save_config(config)
+                print(trans["cooldown_set"].format(cooldown=cooldown))
+            except ValueError:
+                print("Invalid input for cooldown.")
         elif choice == "4":
             break
         else:
             print("Invalid choice.")
+
+def calculate_avg_time(wpm):
+    """Calculate the average time per character based on words per minute."""
+    return 60 / (wpm * 5)
 
 def main_menu():
     """Main menu loop."""
@@ -196,7 +202,7 @@ def main_menu():
         choice = input(trans["select_option"])
         if choice == "1":
             configure(config)
-            config = load_config()
+            config = load_config()  # Reload config in case of changes
         elif choice == "2":
             print(trans["ensure_keyboard"])
             text_path = get_text_file_path(trans)
@@ -206,7 +212,7 @@ def main_menu():
             except Exception:
                 print(trans["file_error"])
                 continue
-            avg_time = 60 / (config["wpm"] * 5)
+            avg_time = calculate_avg_time(config["wpm"])
             print(trans["avg_time"].format(avg_time=avg_time))
             print(trans["starting"])
             time.sleep(3)
@@ -225,7 +231,4 @@ def main_menu():
             print("Invalid choice.")
 
 if __name__ == "__main__":
-    try:
-        main_menu()
-    except KeyboardInterrupt:
-        print("\nProgram exited.")
+    main_menu()
