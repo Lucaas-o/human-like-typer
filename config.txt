@@ -1,3 +1,0 @@
-wpm=150.0
-language=sp
-cooldown=2
