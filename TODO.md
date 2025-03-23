@@ -1,25 +1,125 @@
-# Additional Suggestions (Not Directly in the Code)
+# Human-like Typer To-Do List
+*Last Updated: March 23, 2025*  
+*Purpose: Suggestions for enhancing functionality, usability, and realism of the Human-like Typer program*
 
-## User-Editable Config Profiles
-- Allow users to save and switch between different configurations (for example, "work", "personal", etc.) to quickly change settings without reconfiguring every time.
+## Core Features
 
-## Logging
-- Implement logging to a file (using Python’s built-in logging module) to capture events, errors, and user actions.
-- This can help in troubleshooting issues when the compiled executable is used.
+### 1. Custom Hotkey Configuration
+- [ ] Add an option in the config menu to set a custom pause/resume hotkey.
+  - **Details**: 
+    - Extend `config.json` to include a "hotkey" field (e.g., `{"hotkey": "<ctrl>+<alt>+p"}`).
+    - Update `configure()` to prompt for a hotkey input (validate using `pynput` syntax).
+    - Modify `main_menu()` to use the stored hotkey dynamically.
+  - **Benefit**: Allows users to choose a hotkey that suits their workflow.
 
-## Command-Line Arguments
-- Enable command-line arguments to override settings or start the program in a specific mode.
-- This can be done with modules like `argparse`.
+### 2. User-Editable Config Profiles
+- [ ] Allow users to save and switch between different configurations (e.g., "work", "personal").
+  - **Details**:
+    - Add a profile management system in `config.json` (e.g., `"profiles": {"work": {"wpm": 80, ...}}`).
+    - Update `configure()` with a "Select Profile" or "Save Profile" option.
+    - Load the selected profile at runtime.
+  - **Benefit**: Enables quick settings changes without manual reconfiguration.
 
-## Dynamic Language Update
-- Consider updating the language translations without restarting the program.
-- Implement a command that reloads the config and refreshes the current language.
+### 3. Typing Speed Profiles
+- [ ] Implement preset profiles (e.g., "beginner", "average", "expert") with WPM, error rates, and cooldowns.
+  - **Details**:
+    - Define profiles in code (e.g., `{"beginner": {"wpm": 60, "error_prob": 5.0, "cooldown": 5}}`).
+    - Add a config menu option (e.g., "Set Profile") to select from presets.
+    - Integrate with user-editable profiles for flexibility.
+  - **Benefit**: Simplifies setup for common skill levels.
 
-## Customizable Typing Patterns
-- Allow more fine-tuning of typing behavior.
-  - Varying delays for punctuation, special keys.
-  - Simulating occasional mistakes.
+### 4. Realistic Error Patterns
+- [ ] Simulate common typos (e.g., "teh" for "the") based on keyboard layout instead of random characters.
+  - **Details**:
+    - Create a keyboard layout map (e.g., QWERTY) with adjacent key probabilities.
+    - In `type_text()`, replace random error character with layout-based mistakes (e.g., 't' -> 'r').
+    - Support language-specific layouts (e.g., Spanish ñ placement).
+  - **Benefit**: Increases realism by mimicking human typing errors.
 
-## Graphical Interface
-- Enhance usability by implementing a simple GUI.
-- Use a framework like Tkinter for configuration instead of relying solely on command-line prompts.
+### 5. Customizable Typing Patterns
+- [ ] Allow fine-tuning of typing behavior.
+  - **Details**:
+    - Extend `config.json` with options like `"punctuation_delay_factor": 1.5`, `"mistake_frequency": 0.02`.
+    - Adjust `calculate_typing_delay()` to use these factors for punctuation and special keys.
+    - Simulate occasional mistakes with configurable patterns (e.g., double letters).
+  - **Benefit**: Provides more control over typing realism.
+
+### 6. Pause Duration Tracking
+- [ ] Track time spent paused and subtract it from actual WPM calculation.
+  - **Details**:
+    - Add a global `pause_time` variable, updated in `on_pause_hotkey()` with start/end timestamps.
+    - Adjust `actual_wpm` in `type_text()`: `elapsed_time - pause_time`.
+    - Display pause duration in the completion message.
+  - **Benefit**: Ensures accurate WPM reflecting active typing time.
+
+### 7. Speed Variation Over Time
+- [ ] Simulate human fatigue or bursts by varying WPM (e.g., slowing down after 500 characters).
+  - **Details**:
+    - Add a fatigue factor in `calculate_delays()` (e.g., increase `base_avg_time` by 10% after 500 chars).
+    - Implement random bursts (e.g., 20% faster for 50 chars occasionally).
+    - Make variation configurable in `config.json`.
+  - **Benefit**: Mimics natural human typing patterns.
+
+### 8. Multi-File Support
+- [ ] Allow typing multiple files in sequence with a queue system in the "Typer" option.
+  - **Details**:
+    - Modify `get_text_file_path()` to accept comma-separated paths or a directory.
+    - Create a queue (list) of files in `main_menu()` for option 2.
+    - Loop through the queue in `type_text()`, processing one file at a time.
+  - **Benefit**: Streamlines typing multiple documents without restarting.
+
+## Usability Enhancements
+
+### 9. Graphical Interface
+- [ ] Create a simple Tkinter or PyQt interface for a graphical menu.
+  - **Details**:
+    - Choose a library (e.g., `tkinter` for simplicity, install via `pip install tk` if needed).
+    - Design a window with buttons for "Configure", "Type", "Exit".
+    - Port `configure()` and `main_menu()` logic to GUI events.
+    - Keep console version as an option (e.g., run with `--console` flag).
+  - **Benefit**: Improves accessibility for non-technical users.
+
+### 10. Command-Line Arguments
+- [ ] Enable command-line arguments to override settings or start in a specific mode.
+  - **Details**:
+    - Use `argparse` to support flags (e.g., `--wpm 80`, `--file path/to/file.txt`, `--mode gui`).
+    - Update `main_menu()` to parse args and apply them before the loop.
+    - Document usage in a `--help` message.
+  - **Benefit**: Enhances flexibility for advanced users.
+
+### 11. Dynamic Language Update
+- [ ] Update language translations without restarting the program.
+  - **Details**:
+    - Add a "Reload Language" command in the config menu.
+    - Reload `config.json` and update `translations` dynamically in `configure()`.
+    - Ensure menu refreshes with the new language immediately.
+  - **Benefit**: Improves user experience by avoiding restarts.
+
+## Audio and Feedback
+
+### 12. Sound Effects
+- [ ] Add optional keyboard typing sounds using the `playsound` library.
+  - **Details**:
+    - Install `playsound` (`pip install playsound`).
+    - Source or generate keypress sound files (e.g., `keypress.wav`).
+    - In `type_character()`, play sound asynchronously after each keypress.
+    - Add a config option to enable/disable sounds.
+  - **Benefit**: Enhances immersion and realism.
+
+## Logging and Debugging
+
+### 13. Enhanced Logging
+- [ ] Implement detailed logging to a file using Python’s `logging` module.
+  - **Details**:
+    - Replace print statements with `logging` calls (e.g., `logging.info`, `logging.error`).
+    - Configure a log file (e.g., `typer.log`) with timestamps and levels (INFO, ERROR).
+    - Log events like config changes, typing start/end, and errors.
+  - **Benefit**: Aids troubleshooting, especially for compiled executables.
+
+## Additional Notes
+- **Priority**: 
+  - High: GUI, Realistic Error Patterns (user appeal and realism).
+  - Medium: Profiles, Logging (convenience and debugging).
+  - Low: Sound Effects, Speed Variation (nice-to-have features).
+- **Testing**: Test with edge cases (e.g., special characters, large files, invalid inputs).
+- **Dependencies**: Minimize new libraries (e.g., use `wave` instead of `playsound` for audio if possible).
