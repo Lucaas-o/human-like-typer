@@ -1,6 +1,6 @@
 {
-    "wpm": 250.0,
-    "language": "en",
-    "cooldown": 3,
-    "error_prob": 5.0
+    "wpm": 150.0,
+    "language": "sp",
+    "cooldown": 1.0,
+    "error_prob": 0.0
 }
