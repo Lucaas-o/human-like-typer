@@ -3,3 +3,14 @@ config.json
 node_modules/
 npm-debug.log
 package-lock.json
+yarn-error.log
+yarn-debug.log
+yarn-error.log
+.txt
+.json
+.log
+
+dist/
+build/
+coverage/
+human_like_typer.spec

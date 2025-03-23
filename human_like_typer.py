@@ -6,12 +6,13 @@ import os
 import sys
 import json
 import string
-import pyperclip
 from pynput import keyboard
 from datetime import datetime
+import psutil  # For window detection
+import pygetwindow as gw  # For window management
 
 # Script metadata
-VERSION = "1.3.0"  # Updated version
+VERSION = "1.4.1"  # Batch typing and WPM fix
 
 def get_script_directory():
     """Get the directory where the script or executable is running."""
@@ -23,120 +24,29 @@ script_dir = get_script_directory()
 config_path = os.path.join(script_dir, "config.json")
 log_path = os.path.join(script_dir, "typer_log.txt")
 
-# Language translations with new entries
-translations = {
-    "en": {
-        "menu": f"--- Human-like Typer v{VERSION} ---\n1. Configuration\n2. Typer\n3. Exit",
-        "select_option": "Select an option (1-3): ",
-        "config_menu": "--- Configuration ---\n1. Set WPM (current: {wpm})\n2. Set Language (current: {language})\n3. Set Cooldown (current: {cooldown} seconds)\n4. Set Error Probability (current: {error_prob}%)\n5. Back to main menu",
-        "enter_wpm": "Enter your typing speed in WPM (60-220): ",
-        "wpm_set": "WPM set to {wpm} and saved.",
-        "enter_language": "Select language (en/sp/fr): ",
-        "language_set": "Language set to {lang} and saved.",
-        "enter_cooldown": "Enter cooldown after newline (0-10 seconds): ",
-        "cooldown_set": "Cooldown set to {cooldown} seconds and saved.",
-        "enter_error_prob": "Enter error probability (0-20%): ",
-        "error_prob_set": "Error probability set to {error_prob}% and saved.",
-        "ensure_keyboard": "Ensure your keyboard layout matches the text's language.",
-        "enter_text_path": "Enter the path to the text file (or press Enter for 'text.txt'): ",
-        "file_not_found": "File not found or inaccessible. Please try again.",
-        "file_empty": "Text file is empty. Nothing to type.",
-        "avg_time": "Target average time per character: {avg_time:.3f} seconds",
-        "starting": "Starting in 3 seconds... Switch to your target window now! Press Ctrl+Alt+P to pause/resume.",
-        "paused": "Typing paused. Press Ctrl+Alt+P to resume.",
-        "resumed": "Typing resumed.",
-        "typing_completed": "Typing completed in {elapsed:.1f} seconds.",
-        "exiting": "Exiting program.",
-        "config_error": "Error reading config file: {error}. Using defaults.",
-        "confirm_exit": "Are you sure you want to exit? (y/n): ",
-        "file_error": "Error reading text file: {error}. Check the file and try again.",
-        "progress": "Progress: {typed}/{total} characters ({percent:.1f}%)",
-        "typing_error": "Error during typing: {error}",
-        "actual_wpm": "Actual WPM achieved: {wpm:.1f}",
-        "log_entry": "Typed {chars} characters from {file} at {wpm:.1f} WPM on {date}"
-    },
-    "sp": {
-        "menu": f"--- Escritor Humano v{VERSION} ---\n1. Configuración\n2. Escritor\n3. Salir",
-        "select_option": "Seleccione una opción (1-3): ",
-        "config_menu": "--- Configuración ---\n1. Establecer PPM (actual: {wpm})\n2. Establecer Idioma (actual: {language})\n3. Establecer Enfriamiento (actual: {cooldown} segundos)\n4. Establecer Probabilidad de Error (actual: {error_prob}%)\n5. Volver al menú principal",
-        "enter_wpm": "Ingrese su velocidad de escritura en PPM (60-220): ",
-        "wpm_set": "PPM establecido en {wpm} y guardado.",
-        "enter_language": "Seleccione idioma (en/sp/fr): ",
-        "language_set": "Idioma establecido en {lang} y guardado.",
-        "enter_cooldown": "Ingrese el enfriamiento tras nueva línea (0-10 segundos): ",
-        "cooldown_set": "Enfriamiento establecido en {cooldown} segundos y guardado.",
-        "enter_error_prob": "Ingrese la probabilidad de error (0-20%): ",
-        "error_prob_set": "Probabilidad de error establecida en {error_prob}% y guardada.",
-        "ensure_keyboard": "Asegúrese de que su teclado esté configurado en el idioma del texto.",
-        "enter_text_path": "Ingrese la ruta al archivo de texto (o presione Enter para 'text.txt'): ",
-        "file_not_found": "Archivo no encontrado o inaccesible. Inténtelo de nuevo.",
-        "file_empty": "El archivo de texto está vacío. Nada que escribir.",
-        "avg_time": "Tiempo promedio objetivo por carácter: {avg_time:.3f} segundos",
-        "starting": "Comenzando en 3 segundos... ¡Cambie a su ventana objetivo ahora! Presione Ctrl+Alt+P para pausar/reanudar.",
-        "paused": "Escritura pausada. Presione Ctrl+Alt+P para reanudar.",
-        "resumed": "Escritura reanudada.",
-        "typing_completed": "Escritura completada en {elapsed:.1f} segundos.",
-        "exiting": "Saliendo del programa.",
-        "config_error": "Error al leer el archivo de configuración: {error}. Usando valores predeterminados.",
-        "confirm_exit": "¿Está seguro de que desea salir? (s/n): ",
-        "file_error": "Error al leer el archivo de texto: {error}. Verifique el archivo e intente de nuevo.",
-        "progress": "Progreso: {typed}/{total} caracteres ({percent:.1f}%)",
-        "typing_error": "Error durante la escritura: {error}",
-        "actual_wpm": "PPM real alcanzado: {wpm:.1f}",
-        "log_entry": "Escrito {chars} caracteres desde {file} a {wpm:.1f} PPM el {date}"
-    },
-    "fr": {
-        "menu": f"--- Typer Humain v{VERSION} ---\n1. Configuration\n2. Typer\n3. Quitter",
-        "select_option": "Sélectionnez une option (1-3): ",
-        "config_menu": "--- Configuration ---\n1. Définir MPM (actuel: {wpm})\n2. Définir Langue (actuelle: {language})\n3. Définir Délai (actuel: {cooldown} secondes)\n4. Définir Probabilité d'Erreur (actuelle: {error_prob}%)\n5. Retour au menu principal",
-        "enter_wpm": "Entrez votre vitesse de frappe en MPM (60-220): ",
-        "wpm_set": "MPM défini à {wpm} et enregistré.",
-        "enter_language": "Sélectionnez la langue (en/sp/fr): ",
-        "language_set": "Langue définie à {lang} et enregistrée.",
-        "enter_cooldown": "Entrez le délai après une nouvelle ligne (0-10 secondes): ",
-        "cooldown_set": "Délai défini à {cooldown} secondes et enregistré.",
-        "enter_error_prob": "Entrez la probabilité d'erreur (0-20%): ",
-        "error_prob_set": "Probabilité d'erreur définie à {error_prob}% et enregistrée.",
-        "ensure_keyboard": "Assurez-vous que votre clavier correspond à la langue du texte.",
-        "enter_text_path": "Entrez le chemin du fichier texte (ou appuyez sur Entrée pour 'text.txt'): ",
-        "file_not_found": "Fichier non trouvé ou inaccessible. Veuillez réessayer.",
-        "file_empty": "Le fichier texte est vide. Rien à taper.",
-        "avg_time": "Temps moyen cible par caractère: {avg_time:.3f} secondes",
-        "starting": "Démarrage dans 3 secondes... Passez à votre fenêtre cible maintenant ! Appuyez sur Ctrl+Alt+P pour pause/reprise.",
-        "paused": "Frappe en pause. Appuyez sur Ctrl+Alt+P pour reprendre.",
-        "resumed": "Frappe reprise.",
-        "typing_completed": "Frappe terminée en {elapsed:.1f} secondes.",
-        "exiting": "Quitter le programme.",
-        "config_error": "Erreur de lecture du fichier de configuration: {error}. Utilisation des valeurs par défaut.",
-        "confirm_exit": "Êtes-vous sûr de vouloir quitter ? (o/n): ",
-        "file_error": "Erreur de lecture du fichier texte: {error}. Vérifiez le fichier et réessayez.",
-        "progress": "Progrès: {typed}/{total} caractères ({percent:.1f}%)",
-        "typing_error": "Erreur pendant la frappe: {error}",
-        "actual_wpm": "MPM réel atteint: {wpm:.1f}",
-        "log_entry": "Tapé {chars} caractères depuis {file} à {wpm:.1f} MPM le {date}"
-    }
-}
-
 # Constants
-ERROR_CORRECTION_DELAY = 0.2
-POST_CORRECTION_DELAY = 0.1
-SPACE_DELAY_RANGE = (0.1, 0.3)
+ERROR_CORRECTION_DELAY = 0.1
+POST_CORRECTION_DELAY = 0.05
+SPACE_DELAY_RANGE = (0.05, 0.15)
+BATCH_SIZE = 5  # Number of characters to type in one go
 
 # Global variables
 pause_event = threading.Event()
 typing_start_time = 0
 total_chars_typed = 0
+pause_start_time = 0
+total_pause_time = 0
 config = {}
 
 def load_config():
     """Load the config file or create a default one."""
-    default_config = {"wpm": 60, "language": "en", "cooldown": 3, "error_prob": 1.0}
+    default_config = {"wpm": 60, "cooldown": 3, "error_prob": 1.0}
     if os.path.exists(config_path):
         try:
             with open(config_path, "r", encoding="utf-8") as file:
                 return json.load(file)
         except Exception as e:
-            print(translations["en"]["config_error"].format(error=str(e)))
+            print(f"Error reading config file: {e}. Using defaults.")
     with open(config_path, "w", encoding="utf-8") as file:
         json.dump(default_config, file, indent=4)
     return default_config
@@ -149,167 +59,183 @@ def save_config(config):
     except Exception as e:
         print(f"Error saving config: {e}")
 
-def log_typing_session(file_path, chars, wpm, trans):
+def log_typing_session(file_path, chars, wpm):
     """Log typing session to a file."""
     try:
         with open(log_path, "a", encoding="utf-8") as log_file:
             date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            entry = trans["log_entry"].format(chars=chars, file=file_path, wpm=wpm, date=date)
+            entry = f"Typed {chars} characters from {file_path} at {wpm:.1f} WPM on {date}"
             log_file.write(f"{entry}\n")
     except Exception as e:
         print(f"Error writing to log: {e}")
 
-def get_text_file_path(trans):
+def get_text_file_path():
     """Get and validate the text file path."""
     default_path = os.path.join(script_dir, "text.txt")
     while True:
-        path = input(trans["enter_text_path"]).strip()
+        path = input("Enter the path to the text file (or press Enter for 'text.txt'): ").strip()
         if not path and os.path.exists(default_path):
             return default_path
         elif os.path.exists(path) and os.path.isfile(path):
             return path
-        print(trans["file_not_found"])
+        print("File not found or inaccessible. Please try again.")
+
+def get_active_windows():
+    """Detect and list active windows for selection."""
+    windows = [win for win in gw.getAllWindows() if win.title and not win.isMinimized]
+    common_apps = ["chrome", "firefox", "discord", "explorer", "spotify", "google", "mozilla"]
+    filtered_windows = []
+    for win in windows:
+        title_lower = win.title.lower()
+        if any(app in title_lower for app in common_apps):
+            filtered_windows.append(win)
+    return filtered_windows[:5]
+
+def select_target_window():
+    """Prompt user to select a target window and ensure focus."""
+    windows = get_active_windows()
+    if not windows:
+        print("No suitable windows found. Ensure applications are open.")
+        return None
+    options = "\n".join(f"{i+1}. {win.title}" for i, win in enumerate(windows))
+    choice = input(f"Select a window to type in:\n{options}\nEnter the number: ")
+    try:
+        index = int(choice) - 1
+        if 0 <= index < len(windows):
+            win = windows[index]
+            try:
+                win.activate()
+            except gw.PyGetWindowException:
+                print(f"Failed to activate window '{win.title}'. Clicking to focus instead.")
+                x, y = win.left + win.width // 2, win.top + win.height // 2
+                pyautogui.click(x, y)
+                time.sleep(0.5)
+            return win
+        else:
+            print("Invalid selection.")
+            return None
+    except ValueError:
+        print("Invalid input. Enter a number.")
+        return None
 
 def calculate_delays(wpm, text):
     """Calculate base delay per character to achieve the target WPM."""
     total_chars = len(text)
+    desired_time = (total_chars / 5) * (60 / wpm)  # Total time in seconds
     spaces = text.count(' ')
     newlines = text.count('\n')
-    desired_time = (total_chars / 5) * (60 / wpm)
     space_extra_avg = (SPACE_DELAY_RANGE[0] + SPACE_DELAY_RANGE[1]) / 2
     newline_avg = config["cooldown"]
     total_extra = (spaces * space_extra_avg) + (newlines * newline_avg)
-    base_time = max(desired_time - total_extra, total_chars * 0.01)
+    base_time = max(desired_time - total_extra, total_chars * 0.001)
     base_avg_time = base_time / total_chars
-    return base_avg_time, space_extra_avg, newline_avg
+    return base_avg_time
 
-def calculate_typing_delay(char, base_avg_time):
-    """Calculate variable delay based on character type."""
-    if char in string.punctuation:
-        return random.uniform(base_avg_time * 0.8, base_avg_time * 1.8)
-    elif char.isupper():
-        return random.uniform(base_avg_time * 0.7, base_avg_time * 1.6)
-    return random.uniform(base_avg_time * 0.5, base_avg_time * 1.5)
-
-def type_character(char):
-    """Type a single character using clipboard for UTF-8 support."""
-    try:
-        pyperclip.copy(char)
-        if sys.platform == "darwin":  # macOS
-            pyautogui.hotkey("command", "v")
-        else:  # Windows/Linux
-            pyautogui.hotkey("ctrl", "v")
-    except Exception as e:
-        print(f"Clipboard error: {e}")
-        pyautogui.typewrite(char)  # Fallback
-
-def type_text(file_path, wpm, cooldown, error_prob, trans):
-    """Type text with human-like behavior."""
-    global typing_start_time, total_chars_typed
+def type_text(file_path, wpm, cooldown, error_prob):
+    """Type text with human-like behavior using batch typing."""
+    global typing_start_time, total_chars_typed, total_pause_time, pause_start_time
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             text = f.read()
         if not text.strip():
-            print(trans["file_empty"])
+            print("Text file is empty. Nothing to type.")
             return
         
         total_chars = len(text)
-        base_avg_time, _, _ = calculate_delays(wpm, text)
+        base_avg_time = calculate_delays(wpm, text)
         typed_chars = 0
         typing_start_time = time.time()
+        total_pause_time = 0
         
-        for char in text:
+        for i in range(0, total_chars, BATCH_SIZE):
             if pause_event.is_set():
+                pause_start_time = time.time()
                 pause_event.wait()
+                total_pause_time += time.time() - pause_start_time
             
-            if random.random() < (error_prob / 100):
-                wrong_char = random.choice(string.ascii_letters + string.digits + string.punctuation)
-                type_character(wrong_char)
+            batch = text[i:i + BATCH_SIZE]
+            batch_delay = base_avg_time * len(batch) * random.uniform(0.8, 1.2)
+            
+            if random.random() < (error_prob / 100) * len(batch):
+                wrong_batch = ''.join(random.choice(string.ascii_letters + string.digits + string.punctuation) 
+                                    if random.random() < 0.2 else c for c in batch)
+                pyautogui.typewrite(wrong_batch)
                 time.sleep(ERROR_CORRECTION_DELAY)
-                pyautogui.press("backspace")
+                for _ in range(len(wrong_batch)):
+                    pyautogui.press("backspace")
                 time.sleep(POST_CORRECTION_DELAY)
             
-            type_character(char)
-            delay = calculate_typing_delay(char, base_avg_time)
-            time.sleep(delay)
-            typed_chars += 1
+            pyautogui.typewrite(batch, interval=base_avg_time / 2)
+            typed_chars += len(batch)
             total_chars_typed = typed_chars
             
-            if char == ' ':
+            if ' ' in batch:
                 time.sleep(random.uniform(*SPACE_DELAY_RANGE))
-            elif char == '\n':
+            if '\n' in batch:
                 time.sleep(cooldown)
             
             if total_chars > 0 and typed_chars % 50 == 0:
                 percent = (typed_chars / total_chars) * 100
-                print(trans["progress"].format(typed=typed_chars, total=total_chars, percent=percent))
+                print(f"Progress: {typed_chars}/{total_chars} characters ({percent:.1f}%)")
         
         elapsed_time = time.time() - typing_start_time
-        actual_wpm = (total_chars / 5) / (elapsed_time / 60) if elapsed_time > 0 else 0
-        print(trans["actual_wpm"].format(wpm=actual_wpm))
-        print(trans["typing_completed"].format(elapsed=elapsed_time))
-        log_typing_session(file_path, total_chars, actual_wpm, trans)
+        active_time = elapsed_time - total_pause_time
+        actual_wpm = (total_chars / 5) / (active_time / 60) if active_time > 0 else 0
+        print(f"Target WPM: {wpm} | Actual WPM: {actual_wpm:.1f}")
+        print(f"Typing completed in {elapsed_time:.1f} seconds (paused for {total_pause_time:.1f} seconds).")
+        log_typing_session(file_path, total_chars, actual_wpm)
     
     except pyautogui.FailSafeException:
         print("Typing stopped: Mouse moved to corner (fail-safe triggered).")
     except Exception as e:
-        print(trans["typing_error"].format(error=str(e)))
+        print(f"Error during typing: {e}")
 
 def on_pause_hotkey():
     """Toggle pause state with hotkey."""
+    global pause_start_time
     if pause_event.is_set():
         pause_event.clear()
-        print(translations[config["language"]]["resumed"])
+        print("Typing resumed.")
     else:
         pause_event.set()
-        print(translations[config["language"]]["paused"])
+        print("Typing paused. Press 'p' to resume.")
 
 def configure(config):
     """Configure settings with input validation."""
-    trans = translations[config["language"]]
     while True:
-        print("\n" + trans["config_menu"].format(wpm=config["wpm"], language=config["language"], 
-                                                 cooldown=config["cooldown"], error_prob=config["error_prob"]))
-        choice = input("Select an option (1-5): ").strip()
+        print(f"\n--- Configuration ---\n1. Set WPM (current: {config['wpm']})\n2. Set Cooldown (current: {config['cooldown']} seconds)\n3. Set Error Probability (current: {config['error_prob']}%)\n4. Back to main menu")
+        choice = input("Select an option (1-4): ").strip()
         if choice == "1":
             try:
-                wpm = float(input(trans["enter_wpm"]))
+                wpm = float(input("Enter your typing speed in WPM (60-220): "))
                 if not 60 <= wpm <= 220:
                     raise ValueError("WPM must be between 60 and 220.")
                 config["wpm"] = wpm
                 save_config(config)
-                print(trans["wpm_set"].format(wpm=wpm))
+                print(f"WPM set to {wpm} and saved.")
             except ValueError as e:
                 print(f"Invalid input: {e}")
         elif choice == "2":
-            lang = input(trans["enter_language"]).lower().strip()
-            if lang in ["en", "sp", "fr"]:
-                config["language"] = lang
-                save_config(config)
-                print(trans["language_set"].format(lang=lang))
-            else:
-                print("Invalid language. Choose en, sp, or fr.")
-        elif choice == "3":
             try:
-                cooldown = float(input(trans["enter_cooldown"]))
+                cooldown = float(input("Enter cooldown after newline (0-10 seconds): "))
                 if not 0 <= cooldown <= 10:
                     raise ValueError("Cooldown must be between 0 and 10 seconds.")
                 config["cooldown"] = cooldown
                 save_config(config)
-                print(trans["cooldown_set"].format(cooldown=cooldown))
+                print(f"Cooldown set to {cooldown} seconds and saved.")
             except ValueError as e:
                 print(f"Invalid input: {e}")
-        elif choice == "4":
+        elif choice == "3":
             try:
-                error_prob = float(input(trans["enter_error_prob"]))
+                error_prob = float(input("Enter error probability (0-20%): "))
                 if not 0 <= error_prob <= 20:
                     raise ValueError("Error probability must be between 0 and 20%.")
                 config["error_prob"] = error_prob
                 save_config(config)
-                print(trans["error_prob_set"].format(error_prob=error_prob))
+                print(f"Error probability set to {error_prob}% and saved.")
             except ValueError as e:
                 print(f"Invalid input: {e}")
-        elif choice == "5":
+        elif choice == "4":
             break
         else:
             print("Invalid choice.")
@@ -318,40 +244,42 @@ def main_menu():
     """Main menu loop."""
     global config
     config = load_config()
-    listener = keyboard.GlobalHotKeys({'<ctrl>+<alt>+p': on_pause_hotkey})
+    listener = keyboard.GlobalHotKeys({'p': on_pause_hotkey})
     listener.start()
     
     try:
         while True:
-            trans = translations[config["language"]]
-            print("\n" + trans["menu"])
-            choice = input(trans["select_option"]).strip()
+            print(f"\n--- Human-like Typer v{VERSION} ---\n1. Configuration\n2. Typer\n3. Exit")
+            choice = input("Select an option (1-3): ").strip()
             if choice == "1":
                 configure(config)
                 config = load_config()
             elif choice == "2":
-                print(trans["ensure_keyboard"])
-                text_path = get_text_file_path(trans)
+                print("Ensure your keyboard layout matches the text's language.")
+                text_path = get_text_file_path()
+                target_window = select_target_window()
+                if not target_window:
+                    continue
                 try:
                     with open(text_path, "r", encoding="utf-8") as f:
                         text = f.read()
                         if not text.strip():
-                            print(trans["file_empty"])
+                            print("Text file is empty. Nothing to type.")
                             continue
-                    avg_time, _, _ = calculate_delays(config["wpm"], text)
-                    print(trans["avg_time"].format(avg_time=avg_time))
-                    print(trans["starting"])
+                    avg_time = calculate_delays(config["wpm"], text)
+                    print(f"Target average time per character: {avg_time:.3f} seconds")
+                    print("Starting in 3 seconds... Switch to your target window! Press 'p' to pause/resume.")
                     time.sleep(3)
                     pause_event.clear()
-                    typing_thread = threading.Thread(target=type_text, args=(text_path, config["wpm"], config["cooldown"], config["error_prob"], trans))
+                    typing_thread = threading.Thread(target=type_text, args=(text_path, config["wpm"], config["cooldown"], config["error_prob"]))
                     typing_thread.start()
                     typing_thread.join()
                 except Exception as e:
-                    print(trans["file_error"].format(error=str(e)))
+                    print(f"Error reading text file: {e}. Check the file and try again.")
             elif choice == "3":
-                confirm = input(trans["confirm_exit"]).lower().strip()
-                if confirm in ("y", "s", "o"):
-                    print(trans["exiting"])
+                confirm = input("Are you sure you want to exit? (y/n): ").lower().strip()
+                if confirm in ("y"):
+                    print("Exiting program.")
                     break
             else:
                 print("Invalid choice.")

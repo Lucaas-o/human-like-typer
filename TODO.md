@@ -7,10 +7,11 @@
 ### 1. Custom Hotkey Configuration
 - [ ] Add an option in the config menu to set a custom pause/resume hotkey.
   - **Details**: 
-    - Extend `config.json` to include a "hotkey" field (e.g., `{"hotkey": "<ctrl>+<alt>+p"}`).
+    - Extend `config.json` to include a "hotkey" field (e.g., `{"hotkey": "p"}`).
     - Update `configure()` to prompt for a hotkey input (validate using `pynput` syntax).
     - Modify `main_menu()` to use the stored hotkey dynamically.
   - **Benefit**: Allows users to choose a hotkey that suits their workflow.
+  - **Note**: Simplified to 'p' in v1.3.1; make configurable next.
 
 ### 2. User-Editable Config Profiles
 - [ ] Allow users to save and switch between different configurations (e.g., "work", "personal").
@@ -40,16 +41,16 @@
 - [ ] Allow fine-tuning of typing behavior.
   - **Details**:
     - Extend `config.json` with options like `"punctuation_delay_factor": 1.5`, `"mistake_frequency": 0.02`.
-    - Adjust `calculate_typing_delay()` to use these factors for punctuation and special keys.
+    - Adjust `type_text()` to use these factors for punctuation and special keys.
     - Simulate occasional mistakes with configurable patterns (e.g., double letters).
   - **Benefit**: Provides more control over typing realism.
 
 ### 6. Pause Duration Tracking
-- [ ] Track time spent paused and subtract it from actual WPM calculation.
+- [x] Track time spent paused and subtract it from actual WPM calculation.
   - **Details**:
-    - Add a global `pause_time` variable, updated in `on_pause_hotkey()` with start/end timestamps.
-    - Adjust `actual_wpm` in `type_text()`: `elapsed_time - pause_time`.
-    - Display pause duration in the completion message.
+    - Added global `pause_time` and `pause_start_time`, updated in `on_pause_hotkey()` and `type_text()`.
+    - Adjusted `actual_wpm` calculation in `type_text()`: `elapsed_time - total_pause_time`.
+    - Displayed pause duration in the completion message (v1.3.1).
   - **Benefit**: Ensures accurate WPM reflecting active typing time.
 
 ### 7. Speed Variation Over Time
@@ -77,6 +78,7 @@
     - Design a window with buttons for "Configure", "Type", "Exit".
     - Port `configure()` and `main_menu()` logic to GUI events.
     - Keep console version as an option (e.g., run with `--console` flag).
+    - Reintroduce language translations as a dropdown.
   - **Benefit**: Improves accessibility for non-technical users.
 
 ### 10. Command-Line Arguments
@@ -87,13 +89,14 @@
     - Document usage in a `--help` message.
   - **Benefit**: Enhances flexibility for advanced users.
 
-### 11. Dynamic Language Update
-- [ ] Update language translations without restarting the program.
+### 11. Advanced Window Targeting
+- [ ] Enhance window selection with search and broader app support.
   - **Details**:
-    - Add a "Reload Language" command in the config menu.
-    - Reload `config.json` and update `translations` dynamically in `configure()`.
-    - Ensure menu refreshes with the new language immediately.
-  - **Benefit**: Improves user experience by avoiding restarts.
+    - Allow typing a window title substring to filter options.
+    - Expand `get_active_windows()` to detect more apps beyond the current 5 (e.g., Notepad, Word).
+    - Add an option to type into hidden/minimized windows without activation.
+  - **Benefit**: Increases flexibility for multi-monitor or background use.
+  - **Note**: Current `pygetwindow` activation issue (fixed with click fallback in v1.3.2) may need revisiting.
 
 ## Audio and Feedback
 
@@ -102,7 +105,7 @@
   - **Details**:
     - Install `playsound` (`pip install playsound`).
     - Source or generate keypress sound files (e.g., `keypress.wav`).
-    - In `type_character()`, play sound asynchronously after each keypress.
+    - In `type_text()`, play sound asynchronously after each batch.
     - Add a config option to enable/disable sounds.
   - **Benefit**: Enhances immersion and realism.
 
@@ -118,8 +121,13 @@
 
 ## Additional Notes
 - **Priority**: 
-  - High: GUI, Realistic Error Patterns (user appeal and realism).
+  - High: GUI (usability leap), Realistic Error Patterns (realism).
   - Medium: Profiles, Logging (convenience and debugging).
   - Low: Sound Effects, Speed Variation (nice-to-have features).
-- **Testing**: Test with edge cases (e.g., special characters, large files, invalid inputs).
-- **Dependencies**: Minimize new libraries (e.g., use `wave` instead of `playsound` for audio if possible).
+- **Testing**: 
+  - WPM accuracy achieved in v1.4.1; test with larger files and special characters (e.g., ñ, é).
+  - Verify hotkey reliability across OSes (Windows, macOS, Linux).
+  - Check window targeting on multi-monitor setups.
+- **Dependencies**: 
+  - Current: `pyautogui`, `pynput`, `psutil`, `pygetwindow`.
+  - Future: `tkinter` (GUI), `playsound` (audio), `argparse` (CLI).
