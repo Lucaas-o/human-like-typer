@@ -6,13 +6,12 @@ import os
 import sys
 import json
 import string
-from pynput import keyboard
 from datetime import datetime
-import psutil  # For window detection
-import pygetwindow as gw  # For window management
+import psutil
+import pygetwindow as gw
 
 # Script metadata
-VERSION = "1.4.1"  # Batch typing and WPM fix
+VERSION = "1.4.3"  # Mouse-based pause/resume with fail-safe preserved
 
 def get_script_directory():
     """Get the directory where the script or executable is running."""
@@ -28,10 +27,11 @@ log_path = os.path.join(script_dir, "typer_log.txt")
 ERROR_CORRECTION_DELAY = 0.1
 POST_CORRECTION_DELAY = 0.05
 SPACE_DELAY_RANGE = (0.05, 0.15)
-BATCH_SIZE = 5  # Number of characters to type in one go
+BATCH_SIZE = 5
+PAUSE_RESUME_DELAY = 2.5  # Exact 2.5 seconds pause duration
 
 # Global variables
-pause_event = threading.Event()
+pause_event = threading.Event()  # Still used for threading sync, though not keyboard-based
 typing_start_time = 0
 total_chars_typed = 0
 pause_start_time = 0
@@ -121,7 +121,7 @@ def select_target_window():
 def calculate_delays(wpm, text):
     """Calculate base delay per character to achieve the target WPM."""
     total_chars = len(text)
-    desired_time = (total_chars / 5) * (60 / wpm)  # Total time in seconds
+    desired_time = (total_chars / 5) * (60 / wpm)
     spaces = text.count(' ')
     newlines = text.count('\n')
     space_extra_avg = (SPACE_DELAY_RANGE[0] + SPACE_DELAY_RANGE[1]) / 2
@@ -131,8 +131,15 @@ def calculate_delays(wpm, text):
     base_avg_time = base_time / total_chars
     return base_avg_time
 
+def check_mouse_pause():
+    """Check if mouse is at screen edges to trigger pause (excludes corners for fail-safe)."""
+    screen_width, screen_height = pyautogui.size()
+    mouse_x, mouse_y = pyautogui.position()
+    # Pause if at left or right edge, but not in corners (to preserve FAILSAFE)
+    return (mouse_x <= 0 or mouse_x >= screen_width - 1) and not (mouse_y <= 0 or mouse_y >= screen_height - 1)
+
 def type_text(file_path, wpm, cooldown, error_prob):
-    """Type text with human-like behavior using batch typing."""
+    """Type text with human-like behavior, pausing via mouse position."""
     global typing_start_time, total_chars_typed, total_pause_time, pause_start_time
     try:
         with open(file_path, "r", encoding="utf-8") as f:
@@ -148,35 +155,54 @@ def type_text(file_path, wpm, cooldown, error_prob):
         total_pause_time = 0
         
         for i in range(0, total_chars, BATCH_SIZE):
-            if pause_event.is_set():
-                pause_start_time = time.time()
-                pause_event.wait()
-                total_pause_time += time.time() - pause_start_time
-            
             batch = text[i:i + BATCH_SIZE]
-            batch_delay = base_avg_time * len(batch) * random.uniform(0.8, 1.2)
+            batch_has_error = random.random() < (error_prob / 100) * len(batch)
             
-            if random.random() < (error_prob / 100) * len(batch):
+            if batch_has_error:
                 wrong_batch = ''.join(random.choice(string.ascii_letters + string.digits + string.punctuation) 
                                     if random.random() < 0.2 else c for c in batch)
-                pyautogui.typewrite(wrong_batch)
+                for char in wrong_batch:
+                    if check_mouse_pause():
+                        pause_start_time = time.time()
+                        print("Typing paused (mouse at side edge). Resuming in 2.5 seconds...")
+                        time.sleep(PAUSE_RESUME_DELAY)
+                        total_pause_time += time.time() - pause_start_time
+                        print("Typing resumed.")
+                    pyautogui.typewrite(char)
+                    time.sleep(base_avg_time * random.uniform(0.8, 1.2))
                 time.sleep(ERROR_CORRECTION_DELAY)
                 for _ in range(len(wrong_batch)):
+                    if check_mouse_pause():
+                        pause_start_time = time.time()
+                        print("Typing paused (mouse at side edge). Resuming in 2.5 seconds...")
+                        time.sleep(PAUSE_RESUME_DELAY)
+                        total_pause_time += time.time() - pause_start_time
+                        print("Typing resumed.")
                     pyautogui.press("backspace")
                 time.sleep(POST_CORRECTION_DELAY)
             
-            pyautogui.typewrite(batch, interval=base_avg_time / 2)
-            typed_chars += len(batch)
-            total_chars_typed = typed_chars
-            
-            if ' ' in batch:
-                time.sleep(random.uniform(*SPACE_DELAY_RANGE))
-            if '\n' in batch:
-                time.sleep(cooldown)
-            
-            if total_chars > 0 and typed_chars % 50 == 0:
-                percent = (typed_chars / total_chars) * 100
-                print(f"Progress: {typed_chars}/{total_chars} characters ({percent:.1f}%)")
+            for char in batch:
+                if check_mouse_pause():
+                    pause_start_time = time.time()
+                    print("Typing paused (mouse at side edge). Resuming in 2.5 seconds...")
+                    time.sleep(PAUSE_RESUME_DELAY)
+                    total_pause_time += time.time() - pause_start_time
+                    print("Typing resumed.")
+                
+                pyautogui.typewrite(char)
+                time.sleep(base_avg_time * random.uniform(0.8, 1.2))
+                
+                typed_chars += 1
+                total_chars_typed = typed_chars
+                
+                if char == ' ':
+                    time.sleep(random.uniform(*SPACE_DELAY_RANGE))
+                elif char == '\n':
+                    time.sleep(cooldown)
+                
+                if total_chars > 0 and typed_chars % 50 == 0:
+                    percent = (typed_chars / total_chars) * 100
+                    print(f"Progress: {typed_chars}/{total_chars} characters ({percent:.1f}%)")
         
         elapsed_time = time.time() - typing_start_time
         active_time = elapsed_time - total_pause_time
@@ -189,16 +215,6 @@ def type_text(file_path, wpm, cooldown, error_prob):
         print("Typing stopped: Mouse moved to corner (fail-safe triggered).")
     except Exception as e:
         print(f"Error during typing: {e}")
-
-def on_pause_hotkey():
-    """Toggle pause state with hotkey."""
-    global pause_start_time
-    if pause_event.is_set():
-        pause_event.clear()
-        print("Typing resumed.")
-    else:
-        pause_event.set()
-        print("Typing paused. Press 'p' to resume.")
 
 def configure(config):
     """Configure settings with input validation."""
@@ -244,8 +260,6 @@ def main_menu():
     """Main menu loop."""
     global config
     config = load_config()
-    listener = keyboard.GlobalHotKeys({'p': on_pause_hotkey})
-    listener.start()
     
     try:
         while True:
@@ -268,7 +282,7 @@ def main_menu():
                             continue
                     avg_time = calculate_delays(config["wpm"], text)
                     print(f"Target average time per character: {avg_time:.3f} seconds")
-                    print("Starting in 3 seconds... Switch to your target window! Press 'p' to pause/resume.")
+                    print("Starting in 3 seconds... Move mouse to side edge to pause (resumes in 2.5s), or to corner to stop.")
                     time.sleep(3)
                     pause_event.clear()
                     typing_thread = threading.Thread(target=type_text, args=(text_path, config["wpm"], config["cooldown"], config["error_prob"]))
@@ -285,10 +299,8 @@ def main_menu():
                 print("Invalid choice.")
     except KeyboardInterrupt:
         print("\nProgram interrupted by user.")
-    finally:
-        listener.stop()
 
 if __name__ == "__main__":
     print("Note: This script simulates keyboard input. Use responsibly and avoid misuse.")
-    pyautogui.FAILSAFE = True
+    pyautogui.FAILSAFE = True  # Enables fail-safe: move mouse to corner to stop
     main_menu()

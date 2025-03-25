@@ -1,5 +1,5 @@
 {
-    "wpm": 220.0,
-    "cooldown": 0.0,
-    "error_prob": 0.0
+    "wpm": 90.0,
+    "cooldown": 2.0,
+    "error_prob": 1.0
 }
