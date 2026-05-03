@@ -70,10 +70,14 @@ You can edit the file or use **Configuration** in `--cli` / **Save settings** in
 
 ## Building a Windows `.exe` (optional)
 
+From the repository root (uses [`human_like_typer.spec`](human_like_typer.spec) so the `hltyper` package and pynput Win32 hooks are included):
+
 ```bash
 pip install pyinstaller
-pyinstaller --onefile human_like_typer.py
+pyinstaller --clean human_like_typer.spec
 ```
+
+The binary is written to **`dist/human_like_typer.exe`**. Run it the same way as the script; `config.json` and logs are created next to the `.exe` when you use a one-folder or one-file build.
 
 Some antivirus tools flag auto-typers; that is a known class of false positives for PyInstaller-packaged tools.
 
