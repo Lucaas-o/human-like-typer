@@ -129,5 +129,5 @@
   - Verify hotkey reliability across OSes (Windows, macOS, Linux).
   - Check window targeting on multi-monitor setups.
 - **Dependencies**: 
-  - Current: `pyautogui`, `pynput`, `psutil`, `pygetwindow`.
-  - Future: `tkinter` (GUI), `playsound` (audio), `argparse` (CLI).
+  - Current: `pyautogui`, `pynput`, `pygetwindow` (see `requirements.txt`); stdlib `tkinter` for GUI; `argparse` for CLI.
+  - Optional / future: `playsound` (audio).

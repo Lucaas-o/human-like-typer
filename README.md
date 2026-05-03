@@ -1,76 +1,86 @@
 # Human-like Typer
 
-A Python script that simulates human-like typing by reading text from a file and typing it into any application with realistic delays. Supports English, Spanish, and French, with configurable typing speed (WPM) and automatic cooldowns after newlines.
-
-## Features
-- **Human-like Typing**: Mimics natural typing with random delays between characters and words.
-- **Multi-language Support**: Interface in English (`en`), Spanish (`sp`), or French (`fr`).
-- **Configurable Settings**: Adjust WPM, language, and newline cooldown, saved in `config.txt`.
-- **Text File Input**: Reads from a file, defaults to `text.txt` in the script directory.
-- **Pause/Resume**: Press Enter to pause or resume typing.
-- **Executable Option**: Includes a pre-built `.exe` for Windows users.
+Python utility that simulates human-like typing: per-character timing from a target WPM, random jitter, optional batched typos and corrections, pauses after words and punctuation, and global hotkeys for pause/stop. Ships with a **Tkinter GUI** (default) and a **`--cli` console menu**.
 
 ## Requirements
-- Python 3.6+ (for running the script).
-- PyAutoGUI library (install with `pip install pyautogui`).
-- Windows (for the `.exe` version; others can use the `.py` file).
 
-## Installation
-1. **Download**: Get the files from this repository.
-2. **Install Python** (if running the script): Download from python.org.
-3. **Install PyAutoGUI** (if running the script): Run `pip install pyautogui` in a terminal.
-4. **Run**: Use `python human_like_typer.py` or double-click `human_like_typer.exe`.
+- Python 3.10+ recommended  
+- Dependencies: see [`requirements.txt`](requirements.txt) (`pyautogui`, `PyGetWindow`, `pynput`)
 
-## Usage
-1. **Prepare a Text File**:
-   - Create `text.txt` in the same folder as the script, or use a custom file.
-   - Example `text.txt`:
-  Hello, world!
-  Bonjour, le monde!
-  Hola, mundo!
+```bash
+pip install -r requirements.txt
+```
 
+## Run
 
-2. **Run the Program**:
-- Start `human_like_typer.py` or `human_like_typer.exe`.
-- Menu options:
-- **1. Configuration**: Set WPM, language (`en/sp/fr`), and cooldown.
-- **2. Typer**: Start typing from the text file.
-- **3. Exit**: Quit (with confirmation).
+```bash
+python human_like_typer.py
+```
 
-3. **Typing Process**:
-- After selecting "Typer," switch to your target window within 3 seconds.
-- The script types with human-like delays.
-- Press Enter to pause/resume manually.
-- After each newline, it pauses for the set cooldown and resumes automatically.
+Opens the graphical interface. Use the **CLI menu** instead:
 
-4. **Keyboard Layout**:
-- Match your system’s keyboard layout to the text’s language (e.g., Spanish for `ñ`).
+```bash
+python human_like_typer.py --cli
+```
+
+### One-shot (no GUI)
+
+```bash
+python human_like_typer.py -f path/to/text.txt
+```
+
+Focus the target window before the countdown ends, or select it when prompted.
+
+| Flag | Meaning |
+|------|---------|
+| `--foreground-only` | Do not show the window list; type into the window that already has focus. |
+| `--dry-run` | Print timing estimate only; no keystrokes. |
+| `-f` / `--file` | Text file (UTF-8). |
+| `--wpm N` | Override target WPM for this run. |
+| `--countdown SEC` | Delay before typing (default `3`; use `0` to skip). |
+| `--save` | With `--wpm`, persist WPM into `config.json`. |
+
+## Controls while typing
+
+- **Pause / resume**: configurable global hotkey (default `<f8>` — see `config.json`).
+- **Stop**: configurable (default `<esc>`).
+- **Mouse at left or right screen edge** (not top/bottom): pauses for a few seconds (configurable).
+- **Mouse in a screen corner**: PyAutoGUI fail-safe — movement stops (if `FAILSAFE` is on).
+
+Set your **system keyboard layout** to match the text (e.g. Spanish for `ñ` and accents). The app’s “language” option only changes typo adjacency maps (English vs Spanish QWERTY).
 
 ## Configuration
-Settings are stored in `config.txt`:
-  wpm=60.0 / 60 
-  language=en/sp/fr
- cooldown=3 (s)
 
-- Edit manually or use the configuration menu.
+Settings are stored in **`config.json`** next to `human_like_typer.py` (same folder as the `.exe` if you freeze the app). Defaults include:
 
-## Building the .exe
-To create your own `.exe`:
-1. Install PyInstaller with `pip install pyinstaller`.
-2. Build it with `pyinstaller --onefile human_like_typer.py`.
-3. Find `human_like_typer.exe` in the `dist` folder.
+- `wpm`, `cooldown` (seconds after newline), `error_prob` (%), `language` (`english` / `spanish`)
+- `hotkey_pause`, `hotkey_stop` (pynput-style, e.g. `<f8>`, `<esc>`)
+- `mouse_edge_pause`, `mouse_edge_pause_seconds`
+- Word pauses: `word_pause_min_ms`, `word_pause_max_ms`
+- `punctuation_extra_factor`, thinking pauses (`thinking_pause_*`)
+- `fatigue_enabled` / `burst_enabled` and related tuning
+- `window_list_limit` (how many windows to show when picking a target)
 
-## Note about .exe
-Building the .exe may result in false positives like the ones with this .exe.
-`The detections (e.g., "Program:Win32/Wacapew.C!ml," "BehavesLike.Win64.Dropper.wc") are consistent with tools that automate input or file operations, as seen in web discussions about similar false positives (e.g., games or utilities flagged by McAfee for file I/O). Your script’s benign intent and low detection rate (5/72) support the conclusion that it’s safe. Submitting it to VirusTotal for further analysis should help refine these detections over time.`
+You can edit the file or use **Configuration** in `--cli` / **Save settings** in the GUI.
 
-## Notes
-- The `.exe` works on Windows only.
-- Ensure your target window is active before typing starts.
-- Use Ctrl+C in the terminal to force quit if needed.
+## Logging
+
+- Human-readable line log: `typer_log.txt` (session summaries).
+- Detailed rotating log: `typer_session.log` (with `-v` / verbose, more detail in the file).
+
+## Building a Windows `.exe` (optional)
+
+```bash
+pip install pyinstaller
+pyinstaller --onefile human_like_typer.py
+```
+
+Some antivirus tools flag auto-typers; that is a known class of false positives for PyInstaller-packaged tools.
 
 ## License
-Open-source under the MIT License.
+
+MIT License — see [LICENSE](LICENSE).
 
 ## Contributing
-Fork, submit issues, or pull requests to improve the project!
+
+Issues and pull requests are welcome.
