@@ -1,4 +1,14 @@
-# --- Secrets & local env (never commit) ---
+# Rust build artifacts
+/target
+**/*.rs.bk
+
+# Local runtime config / scratch files (if created in working dir)
+config.json
+config.local.json
+text.txt
+*.log
+
+# Secrets / keys (just in case)
 .env
 .env.*
 !.env.example
@@ -11,64 +21,7 @@ secrets/
 credentials.json
 credentials*.txt
 
-# --- App-local data (paths, WPM prefs, session history) ---
-config.json
-config.local.json
-typer_log.txt
-typer_session.log
-
-# User typing input (may contain private text)
-text.txt
-
-# --- Python ---
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-pip-log.txt
-pip-delete-this-directory.txt
-.pytest_cache/
-.coverage
-.coverage.*
-htmlcov/
-coverage.xml
-*.cover
-.hypothesis/
-.mypy_cache/
-.ruff_cache/
-.dmypy.json
-dmypy.json
-.pytype/
-cython_debug/
-
-# --- Virtual environments ---
-.venv/
-venv/
-ENV/
-env/
-
-# --- JavaScript (if you add tooling later) ---
-node_modules/
-
-# --- Editors & OS ---
+# Editors & OS
 .idea/
 *.swp
 *.swo
@@ -76,18 +29,3 @@ node_modules/
 .DS_Store
 Thumbs.db
 Desktop.ini
-
-# --- Optional: VS Code (uncomment if you keep shared tasks in-repo) ---
-# .vscode/
-
-# --- Packaging / installers ---
-*.msi
-*.dmg
-*.exe
-!**/tools/**/*.exe
-
-# --- Misc ---
-*.log
-*.tmp
-*.temp
-.cache/
