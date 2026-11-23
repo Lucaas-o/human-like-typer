@@ -1,90 +1,41 @@
 # Human-like Typer
 
-Python utility that simulates human-like typing: per-character timing from a target WPM, random jitter, optional batched typos and corrections, pauses after words and punctuation, and global hotkeys for pause/stop. Ships with a **Tkinter GUI** (default) and a **`--cli` console menu**.
+A standalone desktop application built in Rust that simulates human-like keyboard input with variable timing, punctuation pauses, optional typo-and-backspace correction, and instant stop control—distributed as a single executable with no Python, Node.js, or external runtime required.
 
-## Requirements
+## Features
 
-- Python 3.10+ recommended  
-- Dependencies: see [`requirements.txt`](requirements.txt) (`pyautogui`, `PyGetWindow`, `pynput`)
+- **Standalone native executable** – runs without installing Python, runtimes, or third-party packages
+- **Human-like timing** – configurable target WPM, timing jitter, and extra pauses on punctuation
+- **Optional typo simulation** – occasional nearby-key mistakes corrected with `Backspace`
+- **Safe start & stop** – configurable countdown before typing starts and immediate **Stop** button
+- **Persistent settings** – saves preferences locally to your OS configuration directory
 
-```bash
-pip install -r requirements.txt
-```
+## Building a Standalone Executable
 
-## Run
-
-```bash
-python human_like_typer.py
-```
-
-Opens the graphical interface. Use the **CLI menu** instead:
+Requires [Rust](https://rustup.rs/) only on the machine building the binary:
 
 ```bash
-python human_like_typer.py --cli
+cargo build --release
 ```
 
-### One-shot (no GUI)
+Output binary:
+- **Windows:** `target\release\human-like-typer.exe`
+- **macOS / Linux:** `target/release/human-like-typer`
 
-```bash
-python human_like_typer.py -f path/to/text.txt
-```
+## Usage
 
-Focus the target window before the countdown ends, or select it when prompted.
+1. Launch the executable.
+2. Enter or paste the text to type.
+3. Adjust **Speed (WPM)**, **Timing jitter (%)**, **Start delay (sec)**, and **typo simulation** as needed.
+4. Click **Start Typing** and switch focus to your target input field before the countdown finishes.
+5. Click **Stop** at any time to abort typing.
 
-| Flag | Meaning |
-|------|---------|
-| `--foreground-only` | Do not show the window list; type into the window that already has focus. |
-| `--dry-run` | Print timing estimate only; no keystrokes. |
-| `-f` / `--file` | Text file (UTF-8). |
-| `--wpm N` | Override target WPM for this run. |
-| `--countdown SEC` | Delay before typing (default `3`; use `0` to skip). |
-| `--save` | With `--wpm`, persist WPM into `config.json`. |
+## Troubleshooting
 
-## Controls while typing
-
-- **Pause / resume**: configurable global hotkey (default `<f8>` — see `config.json`).
-- **Stop**: configurable (default `<esc>`).
-- **Mouse at left or right screen edge** (not top/bottom): pauses for a few seconds (configurable).
-- **Mouse in a screen corner**: PyAutoGUI fail-safe — movement stops (if `FAILSAFE` is on).
-
-Set your **system keyboard layout** to match the text (e.g. Spanish for `ñ` and accents). The app’s “language” option only changes typo adjacency maps (English vs Spanish QWERTY).
-
-## Configuration
-
-Settings are stored in **`config.json`** next to `human_like_typer.py` (same folder as the `.exe` if you freeze the app). Defaults include:
-
-- `wpm`, `cooldown` (seconds after newline), `error_prob` (%), `language` (`english` / `spanish`)
-- `hotkey_pause`, `hotkey_stop` (pynput-style, e.g. `<f8>`, `<esc>`)
-- `mouse_edge_pause`, `mouse_edge_pause_seconds`
-- Word pauses: `word_pause_min_ms`, `word_pause_max_ms`
-- `punctuation_extra_factor`, thinking pauses (`thinking_pause_*`)
-- `fatigue_enabled` / `burst_enabled` and related tuning
-- `window_list_limit` (how many windows to show when picking a target)
-
-You can edit the file or use **Configuration** in `--cli` / **Save settings** in the GUI.
-
-## Logging
-
-- Human-readable line log: `typer_log.txt` (session summaries).
-- Detailed rotating log: `typer_session.log` (with `-v` / verbose, more detail in the file).
-
-## Building a Windows `.exe` (optional)
-
-From the repository root (uses [`human_like_typer.spec`](human_like_typer.spec) so the `hltyper` package and pynput Win32 hooks are included):
-
-```bash
-pip install pyinstaller
-pyinstaller --clean human_like_typer.spec
-```
-
-The binary is written to **`dist/human_like_typer.exe`**. Run it the same way as the script; `config.json` and logs are created next to the `.exe` when you use a one-folder or one-file build.
-
-Some antivirus tools flag auto-typers; that is a known class of false positives for PyInstaller-packaged tools.
+- **macOS:** Grant **Accessibility** permission to the terminal or executable under **System Settings → Privacy & Security → Accessibility**.
+- **Linux:** Ensure keyboard input simulation is permitted in your active X11/Wayland session.
+- **Antivirus false positives:** Unsigned or newly compiled input-simulation binaries occasionally trigger heuristic alerts; test locally or sign/allowlist as needed.
 
 ## License
 
-MIT License — see [LICENSE](LICENSE).
-
-## Contributing
-
-Issues and pull requests are welcome.
+MIT — see [LICENSE](LICENSE).
